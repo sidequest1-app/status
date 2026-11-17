@@ -1,23 +1,32 @@
 {
- "stand": "2026-11-17T19:46:09.585Z",
+ "stand": "2026-11-17T19:46:42.487Z",
  "intervall_minuten": 10,
  "ziele": {
   "portal": {
    "name": "Portal (Website und Beta)",
    "ok": true,
    "seit": "2026-11-17T19:46:09.585Z",
-   "ms": 2203,
+   "ms": 615,
    "fehler": null,
    "issue": null
   },
   "api": {
    "name": "API",
-   "ok": true,
-   "seit": "2026-11-17T19:46:09.585Z",
-   "ms": 1970,
-   "fehler": null,
-   "issue": null
+   "ok": false,
+   "seit": "2026-11-17T19:46:42.487Z",
+   "ms": 118,
+   "fehler": "HTTP 401",
+   "issue": "https://github.com/sidequest1-app/status/issues/2"
   }
  },
- "vorfaelle": []
+ "vorfaelle": [
+  {
+   "id": "api",
+   "name": "API",
+   "beginn": "2026-11-17T19:46:42.487Z",
+   "ende": null,
+   "fehler": "HTTP 401",
+   "issue": "https://github.com/sidequest1-app/status/issues/2"
+  }
+ ]
 }
