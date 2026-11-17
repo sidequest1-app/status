@@ -1,0 +1,11 @@
+# Hält die (per Commit-SHA gepinnte) Checkout-Action aktuell, neue Versionen erst nach 14 Tagen.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      timezone: Europe/Berlin
+    cooldown:
+      default-days: 14
+    open-pull-requests-limit: 1

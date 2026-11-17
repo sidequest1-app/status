@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<title>SideQuest Status</title>
+<style>
+  :root {
+    --bg: #F2F2F7; --flaeche: #FFFFFF; --tinte: #24304F; --text: #1C1C1E; --gedaempft: #6B7280;
+    --schatten: 4px 5px 0 rgba(36,48,79,.45); --ok: #22B455; --teil: #FF9F0A; --aus: #E5484D; --leer: #D9DCE3;
+    --akzent: #FF6A13;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000000; --flaeche: #1C1C1E; --tinte: #5A5A60; --text: #F2F2F7; --gedaempft: #A1A1AA;
+      --schatten: 4px 5px 0 #2E2E33; --leer: #3A3A3F; --akzent: #22B455;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 28px; font-weight: 900; margin: 0 0 4px; letter-spacing: -.01em; }
+  h1 span { color: var(--akzent); }
+  h2 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--gedaempft); margin: 32px 0 12px; }
+  .karte {
+    background: var(--flaeche); border: 2.5px solid var(--tinte); border-radius: 18px; box-shadow: var(--schatten);
+    padding: 16px 18px; margin-bottom: 16px;
+  }
+  .banner { display: flex; align-items: center; gap: 12px; font-size: 19px; font-weight: 850; }
+  .punkt { width: 16px; height: 16px; border-radius: 50%; flex: none; border: 2px solid var(--tinte); }
+  .ok { background: var(--ok); } .teil { background: var(--teil); } .aus { background: var(--aus); } .leer { background: var(--leer); }
+  .klein { font-size: 13px; color: var(--gedaempft); }
+  .kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .name { font-weight: 800; font-size: 17px; }
+  .pille { font-size: 12px; font-weight: 850; padding: 2px 10px; border-radius: 999px; border: 2px solid var(--tinte); }
+  .pille.ok { color: #0B3D1C; } .pille.aus { color: #fff; }
+  .balken { display: flex; gap: 2px; height: 34px; margin: 14px 0 6px; }
+  .balken i { flex: 1; border-radius: 3px; min-width: 2px; }
+  .achse { display: flex; justify-content: space-between; }
+  .quote { margin-top: 6px; font-weight: 700; color: var(--text); }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li + li { border-top: 1.5px solid var(--leer); margin-top: 10px; padding-top: 10px; }
+  a { color: inherit; }
+  footer { margin-top: 32px; }
+  @media (max-width: 480px) { .balken { gap: 1px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>SideQuest <span>Status</span></h1>
+  <p class="klein" id="stand">Wird geladen …</p>
+  <div class="karte banner" id="gesamt" role="status" aria-live="polite"><span class="punkt leer"></span><span>Wird geladen …</span></div>
+
+  <h2>Dienste</h2>
+  <div id="ziele"></div>
+
+  <h2>Störungen der letzten 90 Tage</h2>
+  <div class="karte"><ul id="vorfaelle"><li class="klein">Keine Störungen.</li></ul></div>
+
+  <footer class="klein">
+    Geprüft wird alle paar Minuten von außen (GitHub Actions). Diese Seite setzt keine Cookies, speichert nichts im Browser
+    und lädt nichts von Drittanbietern. Gehostet bei GitHub Pages.
+  </footer>
+</main>
+<script>
+(() => {
+  const TAGE = 90;
+  const fmt = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", dateStyle: "medium", timeStyle: "short" });
+  const tagFmt = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" });
+  const datumFmt = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "numeric", month: "short" });
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const klasse = (q) => q == null ? "leer" : q >= 0.995 ? "ok" : q >= 0.95 ? "teil" : "aus";
+  const prozent = (q) => q == null ? "–" : (Math.floor(q * 10000) / 100).toLocaleString("de-DE") + " %";
+  const dauer = (ms) => { const m = Math.max(1, Math.round(ms / 60000)); return m < 120 ? `${m} min` : `${Math.round(m / 60)} h`; };
+
+  function letzteTage() {
+    const tage = [];
+    for (let i = TAGE - 1; i >= 0; i--) tage.push(tagFmt.format(new Date(Date.now() - i * 86400000)));
+    return tage;
+  }
+
+  function quote(verlauf, id, tage) {
+    let n = 0, ok = 0;
+    for (const t of tage) { const z = verlauf.tage?.[t]?.[id]; if (z) { n += z.n; ok += z.ok; } }
+    return n ? ok / n : null;
+  }
+
+  function zeichnen(status, verlauf) {
+    const stand = status.stand ? new Date(status.stand) : null;
+    const alt = !stand || Date.now() - stand > 45 * 60000;
+    document.getElementById("stand").textContent = stand
+      ? `Zuletzt geprüft: ${fmt.format(stand)} Uhr` + (alt ? " (die Prüfung läuft gerade nicht regelmäßig)" : "")
+      : "Noch keine Prüfung.";
+
+    const ziele = Object.entries(status.ziele || {});
+    const gestoert = ziele.filter(([, z]) => !z.ok).map(([, z]) => z.name);
+    const gesamt = document.getElementById("gesamt");
+    gesamt.replaceChildren(
+      el("span", "punkt " + (!ziele.length ? "leer" : gestoert.length ? "aus" : "ok")),
+      el("span", null, !ziele.length ? "Noch keine Daten" : gestoert.length ? `Störung: ${gestoert.join(", ")}` : "Alles läuft"),
+    );
+
+    const tage = letzteTage();
+    const box = document.getElementById("ziele");
+    box.replaceChildren();
+    for (const [id, z] of ziele) {
+      const karte = el("section", "karte");
+      const kopf = el("div", "kopf");
+      kopf.append(el("span", "name", z.name), el("span", "pille " + (z.ok ? "ok" : "aus"), z.ok ? "Erreichbar" : "Gestört"));
+      karte.append(kopf);
+      const info = z.ok
+        ? `Seit ${fmt.format(new Date(z.seit))} Uhr erreichbar` + (z.ms != null ? ` · Antwortzeit ${z.ms} ms` : "")
+        : `Seit ${fmt.format(new Date(z.seit))} Uhr gestört` + (z.fehler ? ` · ${z.fehler}` : "");
+      karte.append(el("div", "klein", info));
+      const balken = el("div", "balken");
+      balken.setAttribute("role", "img");
+      balken.setAttribute("aria-label", `Verfügbarkeit ${z.name}, 90 Tage: ${prozent(quote(verlauf, id, tage))}`);
+      for (const t of tage) {
+        const d = verlauf.tage?.[t]?.[id];
+        const q = d && d.n ? d.ok / d.n : null;
+        const i = el("i", klasse(q));
+        const [j, m, tg] = t.split("-");
+        i.title = `${datumFmt.format(new Date(Date.UTC(+j, +m - 1, +tg, 12)))}: ` +
+          (q == null ? "keine Daten" : `${prozent(q)} erreichbar` + (d.ok ? `, Ø ${Math.round(d.ms / d.ok)} ms` : ""));
+        balken.append(i);
+      }
+      karte.append(balken);
+      const achse = el("div", "achse klein");
+      achse.append(el("span", null, "vor 90 Tagen"), el("span", null, "heute"));
+      karte.append(achse);
+      karte.append(el("div", "klein quote",
+        `Verfügbarkeit: 30 Tage ${prozent(quote(verlauf, id, tage.slice(-30)))} · 90 Tage ${prozent(quote(verlauf, id, tage))}`));
+      box.append(karte);
+    }
+
+    const liste = document.getElementById("vorfaelle");
+    const vorfaelle = status.vorfaelle || [];
+    liste.replaceChildren();
+    if (!vorfaelle.length) liste.append(el("li", "klein", "Keine Störungen."));
+    for (const v of vorfaelle) {
+      const li = el("li");
+      const beginn = new Date(v.beginn);
+      li.append(el("div", "name", v.name));
+      const text = v.ende
+        ? `${fmt.format(beginn)} Uhr, Dauer etwa ${dauer(new Date(v.ende) - beginn)}`
+        : `Seit ${fmt.format(beginn)} Uhr, noch nicht behoben`;
+      const zeile = el("div", "klein", text + (v.fehler ? ` · ${v.fehler}` : ""));
+      if (v.issue && /^https:\/\/github\.com\//.test(v.issue)) {
+        const a = el("a", null, "Meldung");
+        a.href = v.issue; a.rel = "noreferrer";
+        zeile.append(" · ", a);
+      }
+      li.append(zeile);
+      liste.append(li);
+    }
+  }
+
+  async function laden() {
+    try {
+      const [s, v] = await Promise.all([
+        fetch("data/status.json", { cache: "no-store" }).then((r) => r.json()),
+        fetch("data/verlauf.json", { cache: "no-store" }).then((r) => r.json()).catch(() => ({ tage: {} })),
+      ]);
+      zeichnen(s, v);
+    } catch {
+      document.getElementById("stand").textContent = "Daten konnten nicht geladen werden.";
+    }
+  }
+  laden();
+  setInterval(laden, 120000);
+})();
+</script>
+</body>
+</html>
