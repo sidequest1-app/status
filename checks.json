@@ -10,7 +10,7 @@
     {
       "id": "api",
       "name": "API",
-      "url": "https://sidequest-beta-sable.vercel.app/api/health",
+      "url": "https://sidequest-beta-sable.vercel.app/api/statustest-gibt-es-nicht",
       "erwartet": { "status": 200, "enthaelt": "\"status\":\"ok\"" }
     }
   ]
