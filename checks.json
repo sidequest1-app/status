@@ -5,7 +5,7 @@
       "id": "portal",
       "name": "Portal (Website und Beta)",
       "url": "https://sidequest-beta-sable.vercel.app/",
-      "erwartet": { "status": 200, "enthaelt": "SideQuest" }
+      "erwartet": { "status": 200, "enthaelt": "sidequest" }
     },
     {
       "id": "api",

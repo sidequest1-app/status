@@ -1,12 +1,16 @@
 name: Erreichbarkeit prüfen
 # Läuft nur im ÖFFENTLICHEN Status-Repo (dort sind Actions-Minuten auf Standard-Runnern kostenlos und unbegrenzt).
-# Nie ins private App-Repo unter .github/workflows kopieren: Alle 10 Minuten wären dort etwa 4.300 Minuten im Monat.
+# Nie ins private App-Repo unter .github/workflows kopieren: Der Dauerlauf würde dort das ganze Kontingent verbrauchen.
+#
+# Dauerlauf: Ein Lauf bleibt gut 5,5 Stunden aktiv und prüft darin alle 10 Minuten (scripts/dauerlauf.sh).
+# Der Zeitplan stößt stündlich an (nicht zur vollen Stunde, da ist GitHub am vollsten). Läuft schon ein Lauf,
+# wartet der neue und übernimmt danach; weitere Anstöße ersetzen den wartenden (erscheinen als „cancelled“).
+# So wird durchgehend geprüft, auch wenn GitHub einzelne Zeitplan-Anstöße verzögert oder streicht.
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
 
-# Nie zwei Läufe gleichzeitig (sonst Konflikte beim Speichern).
 concurrency:
   group: pruefen
   cancel-in-progress: false
@@ -19,24 +23,14 @@ permissions:
 jobs:
   pruefen:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-      - name: Portal und API prüfen
+      - name: Portal und API prüfen (alle 10 Minuten, gut 5,5 Stunden lang)
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: node scripts/pruefen.mjs
-      - name: Stand speichern
-        if: success() || failure()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -q -m "Status $(date -u +%Y-%m-%dT%H:%MZ)"
-          for i in 1 2 3; do
-            git push -q && exit 0
-            git pull -q --rebase
-          done
-          exit 1
+          LAUFZEIT_MINUTEN: "340"
+          ABSTAND_SEKUNDEN: "600"
+        # Kopie ausführen: Der Dauerlauf holt regelmäßig den neuesten Stand (git pull), auch des Skripts selbst.
+        run: cp scripts/dauerlauf.sh "$RUNNER_TEMP/dauerlauf.sh" && bash "$RUNNER_TEMP/dauerlauf.sh"

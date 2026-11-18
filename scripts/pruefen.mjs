@@ -36,7 +36,7 @@ async function einmal(ziel) {
     const ms = Math.round(performance.now() - start);
     const erwartet = ziel.erwartet ?? {};
     if (res.status !== (erwartet.status ?? 200)) return { ok: false, ms, fehler: `HTTP ${res.status}` };
-    if (erwartet.enthaelt && !text.includes(erwartet.enthaelt))
+    if (erwartet.enthaelt && !text.toLowerCase().includes(erwartet.enthaelt.toLowerCase()))
       return { ok: false, ms, fehler: "Antwort ohne erwarteten Inhalt" };
     return { ok: true, ms, fehler: null };
   } catch (err) {
