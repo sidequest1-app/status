@@ -1,5 +1,5 @@
 {
- "stand": "2026-11-25T08:26:52.362Z",
+ "stand": "2026-11-25T08:36:52.859Z",
  "intervall_minuten": 10,
  "ziele": {
   "portal": {
@@ -14,7 +14,7 @@
    "name": "API",
    "ok": true,
    "seit": "2026-11-17T19:49:19.801Z",
-   "ms": 1063,
+   "ms": 1050,
    "fehler": null,
    "issue": null
   }
