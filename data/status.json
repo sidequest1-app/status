@@ -1,12 +1,12 @@
 {
- "stand": "2026-11-25T01:23:55.556Z",
+ "stand": "2026-11-25T01:33:55.717Z",
  "intervall_minuten": 10,
  "ziele": {
   "portal": {
    "name": "Portal (Website und Beta)",
    "ok": true,
    "seit": "2026-11-17T19:49:19.801Z",
-   "ms": 1032,
+   "ms": 1991,
    "fehler": null,
    "issue": null
   },
@@ -14,7 +14,7 @@
    "name": "API",
    "ok": true,
    "seit": "2026-11-17T19:49:19.801Z",
-   "ms": 1085,
+   "ms": 1775,
    "fehler": null,
    "issue": null
   }
