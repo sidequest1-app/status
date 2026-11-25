@@ -6,6 +6,15 @@ name: Erreichbarkeit prüfen
 # Der Zeitplan stößt stündlich an (nicht zur vollen Stunde, da ist GitHub am vollsten). Läuft schon ein Lauf,
 # wartet der neue und übernimmt danach; weitere Anstöße ersetzen den wartenden (erscheinen als „cancelled“).
 # So wird durchgehend geprüft, auch wenn GitHub einzelne Zeitplan-Anstöße verzögert oder streicht.
+#
+# Rechte so eng wie möglich (Sicherheitsaudit 11/2026):
+# - Workflow-weit keine Rechte; nur der Job pruefen darf den Stand speichern (contents) und Ausfall-Issues anlegen
+#   (issues). Nur der eingebaute, kurzlebige GITHUB_TOKEN, keine Secrets.
+# - Checkout ohne gespeicherte Zugangsdaten (persist-credentials: false). Holen (git pull) geht ohne Token, das Repo ist
+#   öffentlich. Den Token bekommen nur der Push und die GitHub CLI für die Issues (scripts/dauerlauf.sh).
+# - Ausgeführt wird der Code des ausgecheckten Commits (dauerlauf.sh und pruefen.mjs werden vor dem ersten git pull
+#   kopiert), nicht der jeweils neueste Stand nach git pull. Code-Änderungen greifen erst mit dem nächsten Lauf,
+#   Änderungen an checks.json (nur Daten) weiter nach spätestens 10 Minuten.
 on:
   schedule:
     - cron: "17 * * * *"
@@ -15,22 +24,31 @@ concurrency:
   group: pruefen
   cancel-in-progress: false
 
-# Nur der eingebaute, kurzlebige GITHUB_TOKEN, keine Secrets: Stand speichern (contents) und Ausfall-Issues (issues).
-permissions:
-  contents: write
-  issues: write
+permissions: {}
 
 jobs:
   pruefen:
     runs-on: ubuntu-latest
     timeout-minutes: 355
+    permissions:
+      contents: write
+      issues: write
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - name: Portal und API prüfen (alle 10 Minuten, gut 5,5 Stunden lang)
         env:
-          GH_TOKEN: ${{ github.token }}
+          # Nicht GH_TOKEN: dauerlauf.sh nimmt den Token aus der Umgebung und gibt ihn nur an git push und an
+          # pruefen.mjs (GitHub CLI für die Ausfall-Issues) weiter.
+          STATUS_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           LAUFZEIT_MINUTEN: "340"
           ABSTAND_SEKUNDEN: "600"
-        # Kopie ausführen: Der Dauerlauf holt regelmäßig den neuesten Stand (git pull), auch des Skripts selbst.
-        run: cp scripts/dauerlauf.sh "$RUNNER_TEMP/dauerlauf.sh" && bash "$RUNNER_TEMP/dauerlauf.sh"
+        # Code des ausgecheckten Commits kopieren und die Kopie ausführen: Der Dauerlauf holt regelmäßig den neuesten
+        # Stand (git pull), führt aber kein dabei geholtes Skript aus.
+        run: |
+          code="$RUNNER_TEMP/statuscode"
+          mkdir -p "$code"
+          cp scripts/dauerlauf.sh scripts/pruefen.mjs "$code/"
+          bash "$code/dauerlauf.sh"

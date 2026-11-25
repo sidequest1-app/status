@@ -13,6 +13,10 @@
 - **Benachrichtigung:** Bei einer Störung legt der Workflow ein Issue mit dem Label `ausfall` an und schließt es, sobald die
   Prüfung wieder klappt. Wer das Repo mit „Watch → Custom → Issues“ beobachtet, bekommt eine GitHub-Benachrichtigung.
 - **Seite:** `index.html`, statisch über GitHub Pages. Keine Cookies, kein Speicher im Browser, keine Drittanbieter, kein Tracking.
+- **Rechte:** workflow-weit keine; nur der Job `pruefen` hat `contents: write` (Stand speichern) und `issues: write`
+  (Ausfall-Issues), mit dem eingebauten GITHUB_TOKEN. Der Checkout speichert keine Zugangsdaten; den Token bekommen nur
+  `git push` und die GitHub CLI. Ausgeführt wird der Code des ausgecheckten Commits (Kopie in `$RUNNER_TEMP`), nicht ein
+  per `git pull` nachgeladenes Skript; Code-Änderungen greifen deshalb erst mit dem nächsten Lauf.
 - **Abhängigkeiten:** keine. Node und die GitHub CLI sind auf den Runnern vorhanden; `actions/checkout` ist per Commit-SHA
   gepinnt und wird von Dependabot nach frühestens 14 Tagen aktualisiert.
 
